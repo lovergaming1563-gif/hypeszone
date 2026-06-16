@@ -15,7 +15,7 @@ try:
     from config import settings
     from database.database import init_db
     from handlers.user_handlers import start, handle_user_message
-    from handlers.admin_handlers import admin_stats, admin_inbox, handle_admin_callback, handle_admin_reply
+    from handlers.admin_handlers import admin_stats, admin_inbox, handle_admin_callback, handle_admin_reply, debug_info
     from handlers.error_handlers import error_handler
 except Exception as e:
     logger.critical(f"Failed to import modules: {e}", exc_info=True)
