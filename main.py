@@ -65,9 +65,10 @@ def build_bot_app():
         handle_admin_reply
     ))
     
-    # 2. User sending messages in DM
+    # 2. User sending messages in DM (Exclude admins)
+    admin_filter = filters.User(user_id=settings.ADMIN_IDS)
     application.add_handler(MessageHandler(
-        filters.ChatType.PRIVATE & ~filters.COMMAND, 
+        filters.ChatType.PRIVATE & ~filters.COMMAND & ~admin_filter, 
         handle_user_message
     ))
     

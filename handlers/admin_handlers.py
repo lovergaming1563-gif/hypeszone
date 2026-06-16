@@ -115,10 +115,12 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
     reply_to = update.message.reply_to_message
     original_text = reply_to.text or reply_to.caption or ""
     
-    # Check if the message being replied to contains the User ID pattern
-    match = re.search(r"User ID: (\d+)", original_text)
+    # Improved regex to match "User ID: 123" or "Conversation with 123"
+    match = re.search(r"(?:User ID|Conversation with)[:\s]+(\d+)", original_text, re.IGNORECASE)
     if not match:
-        logger.warning(f"Admin replied to a message but no User ID found in: {original_text[:50]}...")
+        logger.warning(f"Admin replied to a message but no target ID found. Text: {original_text[:50]}...")
+        # Optional: Let the admin know they replied to the wrong message
+        await update.message.reply_text("❌ Could not find User ID in the message you replied to. Please reply to the bot's prompt or the conversation header.")
         return
 
     target_user_id = int(match.group(1))
