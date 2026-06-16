@@ -24,15 +24,15 @@ except Exception as e:
 # FastAPI App for Health Checks & Uptime Monitoring
 app = FastAPI(title="Support Inbox API")
 
-@app.get("/")
+@app.get("/", methods=["GET", "HEAD"])
 async def root():
     return {"message": "Support Bot API is running"}
 
-@app.get("/health")
+@app.get("/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok"}
 
-@app.get("/ping")
+@app.get("/ping", methods=["GET", "HEAD"])
 async def ping():
     return "pong"
 
