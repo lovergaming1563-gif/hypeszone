@@ -24,6 +24,10 @@ except Exception as e:
 # FastAPI App for Health Checks & Uptime Monitoring
 app = FastAPI(title="Support Inbox API")
 
+@app.get("/")
+async def root():
+    return {"message": "Support Bot API is running"}
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}

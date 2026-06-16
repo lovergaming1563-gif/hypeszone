@@ -60,6 +60,9 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     logger.info(f"Received and saved message from User ID: {user.id}")
 
+    # Send confirmation to user
+    await update.message.reply_text("✅ Your message has been sent to the support team.")
+
     # Alert admins about new activity
     chat = await DBService.get_chat(user.id)
     # Only notify if this is the first unread message to avoid spamming for every single line in a burst
