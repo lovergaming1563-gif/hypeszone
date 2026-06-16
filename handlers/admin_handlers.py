@@ -103,13 +103,15 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
 async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_id = update.effective_user.id
     if not is_admin(admin_id):
+        # This shouldn't happen if filters are correct, but good for debugging
+        logger.warning(f"Message caught by handle_admin_reply but User {admin_id} is not an admin.")
         return
 
-    logger.info(f"Admin {admin_id} is attempting to send a reply...")
+    logger.info(f"Admin {admin_id} is replying to a message...")
 
     # Check if it's a reply to our ForceReply message
     if not update.message.reply_to_message:
-        logger.info("Admin message is not a reply to a bot message (no reply_to_message).")
+        logger.info(f"Admin {admin_id} message is not a reply (reply_to_message is None).")
         return
 
     reply_to = update.message.reply_to_message

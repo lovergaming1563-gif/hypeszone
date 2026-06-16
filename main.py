@@ -24,19 +24,22 @@ except Exception as e:
 # FastAPI App for Health Checks & Uptime Monitoring
 app = FastAPI(title="Support Inbox API")
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     return {"message": "Support Bot API is running"}
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok"}
 
-@app.get("/ping")
+@app.api_route("/ping", methods=["GET", "HEAD"])
 async def ping():
     return "pong"
 
 def build_bot_app():
+    admin_list = settings.ADMIN_IDS
+    logger.info(f"Building bot with {len(admin_list)} admins configured.")
+    
     if not settings.BOT_TOKEN:
         logger.error("BOT_TOKEN is missing in the environment variables.")
         raise ValueError("BOT_TOKEN is missing in the environment variables.")
@@ -66,9 +69,14 @@ def build_bot_app():
     ))
     
     # 2. User sending messages in DM (Exclude admins)
-    admin_filter = filters.User(user_id=settings.ADMIN_IDS)
+    if admin_list:
+        admin_filter = filters.User(user_id=admin_list)
+        user_handler_filter = filters.ChatType.PRIVATE & ~filters.COMMAND & ~admin_filter
+    else:
+        user_handler_filter = filters.ChatType.PRIVATE & ~filters.COMMAND
+
     application.add_handler(MessageHandler(
-        filters.ChatType.PRIVATE & ~filters.COMMAND & ~admin_filter, 
+        user_handler_filter, 
         handle_user_message
     ))
     
