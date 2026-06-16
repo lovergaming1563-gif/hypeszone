@@ -54,14 +54,21 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Save message to DB (this also opens the chat and increments unread count)
     text_content = update.message.text or update.message.caption or ""
-    await DBService.add_message(
-        user.id, user.id, text=text_content, 
-        media_type=media_type, media_file_id=media_file_id, is_from_user=True
-    )
-    logger.info(f"Received and saved message from User ID: {user.id}")
+    try:
+        await DBService.add_message(
+            user.id, user.id, text=text_content, 
+            media_type=media_type, media_file_id=media_file_id, is_from_user=True
+        )
+        logger.info(f"✅ Message saved to DB for User ID: {user.id}")
+    except Exception as e:
+        logger.error(f"❌ Failed to save message to DB: {e}")
 
     # Send confirmation to user
-    await update.message.reply_text("✅ Your message has been sent to the support team.")
+    try:
+        await update.message.reply_text("✅ Your message has been sent to the support team.")
+        logger.info(f"📤 Sent confirmation reply to User ID: {user.id}")
+    except Exception as e:
+        logger.error(f"❌ Failed to send confirmation reply to User ID: {user.id}: {e}")
 
     # Alert admins about new activity
     chat = await DBService.get_chat(user.id)

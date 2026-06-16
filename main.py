@@ -86,6 +86,11 @@ async def start_services():
         logger.info("Initializing Telegram bot...")
         bot_app = build_bot_app()
         await bot_app.initialize()
+        
+        # Explicitly delete webhook to clear any previous settings and drop pending updates
+        logger.info("Clearing any existing webhooks/updates...")
+        await bot_app.bot.delete_webhook(drop_pending_updates=True)
+        
         await bot_app.start()
         
         # Start polling for Telegram updates
