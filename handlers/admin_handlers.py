@@ -101,33 +101,35 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text(f"🚫 User {user_id} has been banned.")
 
 async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id):
+    admin_id = update.effective_user.id
+    if not is_admin(admin_id):
         return
 
-    logger.info("Admin is sending a reply...")
+    logger.info(f"Admin {admin_id} is attempting to send a reply...")
 
     # Check if it's a reply to our ForceReply message
     if not update.message.reply_to_message:
-        logger.info("Admin message is not a reply to a bot message.")
+        logger.info("Admin message is not a reply to a bot message (no reply_to_message).")
         return
 
     reply_to = update.message.reply_to_message
     original_text = reply_to.text or reply_to.caption or ""
-    logger.info(f"Admin replied to: {original_text[:50]}...")
-
+    
+    # Check if the message being replied to contains the User ID pattern
     match = re.search(r"User ID: (\d+)", original_text)
     if not match:
-        logger.warning(f"Could not extract User ID from: {original_text}")
+        logger.warning(f"Admin replied to a message but no User ID found in: {original_text[:50]}...")
         return
 
-    user_id = int(match.group(1))
-    logger.info(f"Targeting User ID: {user_id}")
+    target_user_id = int(match.group(1))
+    logger.info(f"Admin {admin_id} targeting User ID: {target_user_id}")
     
     # Save admin message
     text_content = update.message.text or update.message.caption or ""
     media_type = "text"
     media_file_id = None
     
+    # [Rest of media detection logic remains the same...]
     if update.message.photo: 
         media_type = "photo"
         media_file_id = update.message.photo[-1].file_id
@@ -147,19 +149,19 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
         media_type = "sticker"
         media_file_id = update.message.sticker.file_id
 
-    await DBService.add_message(
-        user_id, update.effective_user.id, text=text_content, 
-        media_type=media_type, media_file_id=media_file_id, is_from_user=False
-    )
-    
-    # Reset unread count when admin replies
-    await DBService.update_chat_status(user_id, "open", reset_unread=True)
-
-    # Send to user
     try:
-        await update.message.copy(chat_id=user_id)
-        logger.info(f"Successfully sent reply to User ID: {user_id}")
-        await update.message.reply_text(f"✅ Reply sent to User ID: {user_id}.")
+        await DBService.add_message(
+            target_user_id, admin_id, text=text_content, 
+            media_type=media_type, media_file_id=media_file_id, is_from_user=False
+        )
+        
+        # Reset unread count when admin replies
+        await DBService.update_chat_status(target_user_id, "open", reset_unread=True)
+
+        # Send to user
+        await update.message.copy(chat_id=target_user_id)
+        logger.info(f"✅ Successfully sent admin reply to User ID: {target_user_id}")
+        await update.message.reply_text(f"✅ Reply sent to User ID: {target_user_id}.")
     except Exception as e:
-        logger.error(f"Failed to send reply to user {user_id}: {e}")
+        logger.error(f"❌ Failed to send reply to user {target_user_id}: {e}")
         await update.message.reply_text(f"❌ Failed to send reply: {e}")
