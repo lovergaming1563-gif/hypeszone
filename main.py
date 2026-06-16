@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import uvicorn
 from fastapi import FastAPI
 from telegram import Update
@@ -6,12 +7,19 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 )
 
-from config import settings
-from database.database import init_db
-from handlers.user_handlers import start, handle_user_message
-from handlers.admin_handlers import admin_stats, admin_inbox, handle_admin_callback, handle_admin_reply
-from handlers.error_handlers import error_handler
+# Initialize logging as early as possible
 from utils.logger import logger
+logger.info("Starting Support Bot Application...")
+
+try:
+    from config import settings
+    from database.database import init_db
+    from handlers.user_handlers import start, handle_user_message
+    from handlers.admin_handlers import admin_stats, admin_inbox, handle_admin_callback, handle_admin_reply
+    from handlers.error_handlers import error_handler
+except Exception as e:
+    logger.critical(f"Failed to import modules: {e}", exc_info=True)
+    sys.exit(1)
 
 # FastAPI App for Health Checks & Uptime Monitoring
 app = FastAPI(title="Support Inbox API")
@@ -26,6 +34,7 @@ async def ping():
 
 def build_bot_app():
     if not settings.BOT_TOKEN:
+        logger.error("BOT_TOKEN is missing in the environment variables.")
         raise ValueError("BOT_TOKEN is missing in the environment variables.")
         
     application = (
@@ -64,35 +73,43 @@ def build_bot_app():
     return application
 
 async def start_services():
-    # Initialize the database
-    await init_db()
-    
-    # Initialize and start the Telegram Bot
-    bot_app = build_bot_app()
-    await bot_app.initialize()
-    await bot_app.start()
-    
-    # Start polling for Telegram updates
-    await bot_app.updater.start_polling(drop_pending_updates=True)
-    logger.info("Private Support Inbox Bot Started Successfully")
-    
-    # Start FastAPI server
-    config = uvicorn.Config(app, host="0.0.0.0", port=settings.PORT, log_level="warning")
-    server = uvicorn.Server(config)
-    
     try:
+        # Initialize the database
+        logger.info("Initializing database...")
+        await init_db()
+        
+        # Initialize and start the Telegram Bot
+        logger.info("Initializing Telegram bot...")
+        bot_app = build_bot_app()
+        await bot_app.initialize()
+        await bot_app.start()
+        
+        # Start polling for Telegram updates
+        await bot_app.updater.start_polling(drop_pending_updates=True)
+        logger.info("Private Support Inbox Bot Started Successfully and Polling.")
+        
+        # Start FastAPI server
+        logger.info(f"Starting FastAPI server on port {settings.PORT}...")
+        config = uvicorn.Config(app, host="0.0.0.0", port=settings.PORT, log_level="info")
+        server = uvicorn.Server(config)
+        
         await server.serve()
-    except asyncio.CancelledError:
-        pass
+    except Exception as e:
+        logger.error(f"Error in start_services: {e}", exc_info=True)
+        raise
     finally:
         # Graceful shutdown
-        logger.info("Shutting down bot...")
-        await bot_app.updater.stop()
-        await bot_app.stop()
-        await bot_app.shutdown()
+        if 'bot_app' in locals():
+            logger.info("Shutting down bot...")
+            await bot_app.updater.stop()
+            await bot_app.stop()
+            await bot_app.shutdown()
 
 if __name__ == "__main__":
     try:
         asyncio.run(start_services())
     except KeyboardInterrupt:
         logger.info("Bot stopped by user.")
+    except Exception as e:
+        logger.critical(f"Fatal crash: {e}", exc_info=True)
+        sys.exit(1)
