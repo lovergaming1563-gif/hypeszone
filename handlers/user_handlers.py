@@ -27,6 +27,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     
+    # SAFETY FALLBACK: If an admin sends a message, don't treat it as a ticket
+    if user.id in settings.ADMIN_IDS:
+        logger.info(f"Ignoring message from admin {user.id} in user_handler.")
+        return
+        
     if await DBService.is_user_banned(user.id):
         return
 

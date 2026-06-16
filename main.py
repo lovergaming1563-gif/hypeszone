@@ -54,6 +54,7 @@ def build_bot_app():
     
     # User Handlers
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("debug", debug_info))
     
     # Admin Handlers
     application.add_handler(CommandHandler("inbox", admin_inbox))
@@ -62,21 +63,16 @@ def build_bot_app():
     
     # Message Handlers
     
-    # 1. Private Chat Admin Reply Handler
+    # 1. Admin Reply Handler (Must be first)
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & filters.REPLY & ~filters.COMMAND, 
         handle_admin_reply
     ))
     
-    # 2. User sending messages in DM (Exclude admins)
-    if admin_list:
-        admin_filter = filters.User(user_id=admin_list)
-        user_handler_filter = filters.ChatType.PRIVATE & ~filters.COMMAND & ~admin_filter
-    else:
-        user_handler_filter = filters.ChatType.PRIVATE & ~filters.COMMAND
-
+    # 2. User message handler (Exclude admins via filter)
+    admin_filter = filters.User(user_id=settings.ADMIN_IDS)
     application.add_handler(MessageHandler(
-        user_handler_filter, 
+        filters.ChatType.PRIVATE & ~filters.COMMAND & ~admin_filter, 
         handle_user_message
     ))
     

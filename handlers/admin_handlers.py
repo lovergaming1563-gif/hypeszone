@@ -100,19 +100,31 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await DBService.ban_user(user_id, True)
         await query.message.reply_text(f"🚫 User {user_id} has been banned.")
 
+async def debug_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    admin_list = settings.ADMIN_IDS
+    is_user_admin = user_id in admin_list
+    
+    debug_text = (
+        f"🔍 <b>Debug Info</b>\n\n"
+        f"Your ID: <code>{user_id}</code>\n"
+        f"Admin Status: <b>{is_user_admin}</b>\n"
+        f"Configured Admins: {len(admin_list)}\n"
+    )
+    await update.message.reply_text(debug_text, parse_mode="HTML")
+
 async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_id = update.effective_user.id
+    
+    # Crucial: Double check admin status
     if not is_admin(admin_id):
-        # This shouldn't happen if filters are correct, but good for debugging
-        logger.warning(f"Message caught by handle_admin_reply but User {admin_id} is not an admin.")
+        return
+
+    # If it's not a technical reply, ignore it here (let other handlers take it if any)
+    if not update.message.reply_to_message:
         return
 
     logger.info(f"Admin {admin_id} is replying to a message...")
-
-    # Check if it's a reply to our ForceReply message
-    if not update.message.reply_to_message:
-        logger.info(f"Admin {admin_id} message is not a reply (reply_to_message is None).")
-        return
 
     reply_to = update.message.reply_to_message
     original_text = reply_to.text or reply_to.caption or ""
